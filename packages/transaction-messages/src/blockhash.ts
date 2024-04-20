@@ -1,7 +1,7 @@
 import { SOLANA_ERROR__TRANSACTION__EXPECTED_BLOCKHASH_LIFETIME, SolanaError } from '@solana/errors';
 import { assertIsBlockhash, type Blockhash } from '@solana/rpc-types';
 
-import { IDurableNonceTransactionMessage } from './durable-nonce';
+import { TransactionMessageWithDurableNonceLifetime } from './durable-nonce';
 import { BaseTransactionMessage } from './transaction-message';
 
 type BlockhashLifetimeConstraint = Readonly<{
@@ -9,13 +9,13 @@ type BlockhashLifetimeConstraint = Readonly<{
     lastValidBlockHeight: bigint;
 }>;
 
-export interface ITransactionMessageWithBlockhashLifetime {
+export interface TransactionMessageWithBlockhashLifetime {
     readonly lifetimeConstraint: BlockhashLifetimeConstraint;
 }
 
-function isTransactionMessageWithBlockhashLifetime(
-    transaction: BaseTransactionMessage | (BaseTransactionMessage & ITransactionMessageWithBlockhashLifetime),
-): transaction is BaseTransactionMessage & ITransactionMessageWithBlockhashLifetime {
+export function isTransactionMessageWithBlockhashLifetime(
+    transaction: BaseTransactionMessage | (BaseTransactionMessage & TransactionMessageWithBlockhashLifetime),
+): transaction is BaseTransactionMessage & TransactionMessageWithBlockhashLifetime {
     const lifetimeConstraintShapeMatches =
         'lifetimeConstraint' in transaction &&
         typeof transaction.lifetimeConstraint.blockhash === 'string' &&
@@ -30,30 +30,30 @@ function isTransactionMessageWithBlockhashLifetime(
 }
 
 export function assertIsTransactionMessageWithBlockhashLifetime(
-    transaction: BaseTransactionMessage | (BaseTransactionMessage & ITransactionMessageWithBlockhashLifetime),
-): asserts transaction is BaseTransactionMessage & ITransactionMessageWithBlockhashLifetime {
+    transaction: BaseTransactionMessage | (BaseTransactionMessage & TransactionMessageWithBlockhashLifetime),
+): asserts transaction is BaseTransactionMessage & TransactionMessageWithBlockhashLifetime {
     if (!isTransactionMessageWithBlockhashLifetime(transaction)) {
         throw new SolanaError(SOLANA_ERROR__TRANSACTION__EXPECTED_BLOCKHASH_LIFETIME);
     }
 }
 
 export function setTransactionMessageLifetimeUsingBlockhash<
-    TTransaction extends BaseTransactionMessage & IDurableNonceTransactionMessage,
+    TTransaction extends BaseTransactionMessage & TransactionMessageWithDurableNonceLifetime,
 >(
     blockhashLifetimeConstraint: BlockhashLifetimeConstraint,
     transaction: TTransaction,
-): ITransactionMessageWithBlockhashLifetime & Omit<TTransaction, 'lifetimeConstraint'>;
+): Omit<TTransaction, 'lifetimeConstraint'> & TransactionMessageWithBlockhashLifetime;
 
 export function setTransactionMessageLifetimeUsingBlockhash<
-    TTransaction extends BaseTransactionMessage | (BaseTransactionMessage & ITransactionMessageWithBlockhashLifetime),
+    TTransaction extends BaseTransactionMessage | (BaseTransactionMessage & TransactionMessageWithBlockhashLifetime),
 >(
     blockhashLifetimeConstraint: BlockhashLifetimeConstraint,
     transaction: TTransaction,
-): ITransactionMessageWithBlockhashLifetime & TTransaction;
+): TransactionMessageWithBlockhashLifetime & TTransaction;
 
 export function setTransactionMessageLifetimeUsingBlockhash(
     blockhashLifetimeConstraint: BlockhashLifetimeConstraint,
-    transaction: BaseTransactionMessage | (BaseTransactionMessage & ITransactionMessageWithBlockhashLifetime),
+    transaction: BaseTransactionMessage | (BaseTransactionMessage & TransactionMessageWithBlockhashLifetime),
 ) {
     if (
         'lifetimeConstraint' in transaction &&

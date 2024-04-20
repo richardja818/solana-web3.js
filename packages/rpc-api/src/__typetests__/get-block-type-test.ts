@@ -12,7 +12,7 @@ import type {
     TransactionStatus,
     U64UnsafeBeyond2Pow53Minus1,
 } from '@solana/rpc-types';
-import { TransactionVersion } from '@solana/transactions';
+import { TransactionVersion } from '@solana/transaction-messages';
 
 import { GetBlockApi } from '../getBlock';
 

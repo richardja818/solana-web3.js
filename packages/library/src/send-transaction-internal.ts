@@ -6,12 +6,10 @@ import {
     waitForRecentTransactionConfirmation,
 } from '@solana/transaction-confirmation';
 import {
-    BaseTransaction,
+    FullySignedTransaction,
     getBase64EncodedWireTransaction,
-    IDurableNonceTransaction,
-    IFullySignedTransaction,
-    ITransactionWithBlockhashLifetime,
-    ITransactionWithFeePayer,
+    TransactionWithBlockhashLifetime,
+    TransactionWithDurableNonceLifetime,
 } from '@solana/transactions';
 
 interface SendAndConfirmDurableNonceTransactionConfig
@@ -23,7 +21,7 @@ interface SendAndConfirmDurableNonceTransactionConfig
             'getNonceInvalidationPromise' | 'getRecentSignatureConfirmationPromise'
         >,
     ) => Promise<void>;
-    transaction: IDurableNonceTransaction & SendableTransaction;
+    transaction: FullySignedTransaction & TransactionWithDurableNonceLifetime;
 }
 
 interface SendAndConfirmTransactionWithBlockhashLifetimeConfig
@@ -35,23 +33,18 @@ interface SendAndConfirmTransactionWithBlockhashLifetimeConfig
             'getBlockHeightExceedencePromise' | 'getRecentSignatureConfirmationPromise'
         >,
     ) => Promise<void>;
-    transaction: ITransactionWithBlockhashLifetime & SendableTransaction;
+    transaction: FullySignedTransaction & TransactionWithBlockhashLifetime;
 }
 
 interface SendTransactionBaseConfig extends SendTransactionConfigWithoutEncoding {
     abortSignal?: AbortSignal;
     commitment: Commitment;
     rpc: Rpc<SendTransactionApi>;
-    transaction: SendableTransaction;
+    transaction: FullySignedTransaction;
 }
 
 interface SendTransactionConfigWithoutEncoding
     extends Omit<NonNullable<Parameters<SendTransactionApi['sendTransaction']>[1]>, 'encoding'> {}
-
-export type SendableTransaction = BaseTransaction &
-    IFullySignedTransaction &
-    ITransactionWithFeePayer &
-    (IDurableNonceTransaction | ITransactionWithBlockhashLifetime);
 
 function getSendTransactionConfigWithAdjustedPreflightCommitment(
     commitment: Commitment,

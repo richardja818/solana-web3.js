@@ -13,7 +13,7 @@ import type {
     U64UnsafeBeyond2Pow53Minus1,
     UnixTimestamp,
 } from '@solana/rpc-types';
-import type { TransactionVersion } from '@solana/transactions';
+import type { TransactionVersion } from '@solana/transaction-messages';
 
 // API response types
 

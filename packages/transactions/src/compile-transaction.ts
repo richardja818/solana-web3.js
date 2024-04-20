@@ -1,30 +1,64 @@
-import { SignatureBytes } from '@solana/keys';
+import { ReadonlyUint8Array } from '@solana/codecs-core';
+import {
+    CompilableTransactionMessage,
+    compileTransactionMessage,
+    getCompiledTransactionMessageEncoder,
+    isTransactionMessageWithBlockhashLifetime,
+    TransactionMessageWithBlockhashLifetime,
+    TransactionMessageWithDurableNonceLifetime,
+} from '@solana/transaction-messages';
 
-import { CompilableTransaction } from './compilable-transaction';
-import { CompiledMessage, compileTransactionMessage } from './message';
-import { ITransactionWithSignatures } from './signatures';
+import {
+    TransactionWithBlockhashLifetime,
+    TransactionWithDurableNonceLifetime,
+    TransactionWithLifetime,
+} from './lifetime';
+import { SignaturesMap, Transaction, TransactionMessageBytes } from './transaction';
 
-export type CompiledTransaction = Readonly<{
-    compiledMessage: CompiledMessage;
-    signatures: SignatureBytes[];
-}>;
+export function compileTransaction(
+    transactionMessage: CompilableTransactionMessage & TransactionMessageWithBlockhashLifetime,
+): Readonly<Transaction & TransactionWithBlockhashLifetime>;
 
-export function getCompiledTransaction(
-    transaction: CompilableTransaction | (CompilableTransaction & ITransactionWithSignatures),
-): CompiledTransaction {
-    const compiledMessage = compileTransactionMessage(transaction);
-    let signatures;
-    if ('signatures' in transaction) {
-        signatures = [];
-        for (let ii = 0; ii < compiledMessage.header.numSignerAccounts; ii++) {
-            signatures[ii] =
-                transaction.signatures[compiledMessage.staticAccounts[ii]] ?? new Uint8Array(Array(64).fill(0));
-        }
-    } else {
-        signatures = Array(compiledMessage.header.numSignerAccounts).fill(new Uint8Array(Array(64).fill(0)));
-    }
-    return {
+export function compileTransaction(
+    transactionMessage: CompilableTransactionMessage & TransactionMessageWithDurableNonceLifetime,
+): Readonly<Transaction & TransactionWithDurableNonceLifetime>;
+
+export function compileTransaction(
+    transactionMessage: CompilableTransactionMessage,
+): Readonly<Transaction & TransactionWithLifetime>;
+
+export function compileTransaction(
+    transactionMessage: CompilableTransactionMessage,
+): Readonly<Transaction & TransactionWithLifetime> {
+    const compiledMessage = compileTransactionMessage(transactionMessage);
+    const messageBytes = getCompiledTransactionMessageEncoder().encode(
         compiledMessage,
-        signatures,
+    ) as ReadonlyUint8Array as TransactionMessageBytes;
+
+    const transactionSigners = compiledMessage.staticAccounts.slice(0, compiledMessage.header.numSignerAccounts);
+    const signatures: SignaturesMap = {};
+    for (const signerAddress of transactionSigners) {
+        signatures[signerAddress] = null;
+    }
+
+    let lifetimeConstraint: TransactionWithLifetime['lifetimeConstraint'];
+    if (isTransactionMessageWithBlockhashLifetime(transactionMessage)) {
+        lifetimeConstraint = {
+            blockhash: transactionMessage.lifetimeConstraint.blockhash,
+            lastValidBlockHeight: transactionMessage.lifetimeConstraint.lastValidBlockHeight,
+        };
+    } else {
+        lifetimeConstraint = {
+            nonce: transactionMessage.lifetimeConstraint.nonce,
+            nonceAccountAddress: transactionMessage.instructions[0].accounts[0].address,
+        };
+    }
+
+    const transaction: Transaction & TransactionWithLifetime = {
+        lifetimeConstraint,
+        messageBytes: messageBytes as TransactionMessageBytes,
+        signatures: Object.freeze(signatures),
     };
+
+    return Object.freeze(transaction);
 }

@@ -1,10 +1,8 @@
 import type { Address } from '@solana/addresses';
+import stringify from '@solana/fast-stable-stringify';
 import type { Signature } from '@solana/keys';
 import type { GetAccountInfoApi, GetBlockApi, GetProgramAccountsApi, GetTransactionApi } from '@solana/rpc';
 import type { Commitment, Slot } from '@solana/rpc-types';
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
-import stringify from 'json-stable-stringify';
 
 export type BatchLoadPromiseCallback<T> = Readonly<{
     reject: (reason?: unknown) => void;
@@ -67,13 +65,4 @@ export type RpcGraphQLLoaders = {
     transaction: TransactionLoader;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function replacer(_: any, value: any) {
-    if (typeof value === 'bigint') {
-        return value.toString() + 'n';
-    }
-    return value;
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const cacheKeyFn = (obj: any) => stringify(obj, { replacer });
+export const cacheKeyFn = (obj: unknown) => stringify(obj) ?? '';

@@ -6291,10 +6291,7 @@ export class Connection {
     args: IWSRequestParams,
   ): ClientSubscriptionId {
     const clientSubscriptionId = this._nextClientSubscriptionId++;
-    const hash = fastStableStringify(
-      [subscriptionConfig.method, args],
-      true /* isArrayProp */,
-    );
+    const hash = fastStableStringify([subscriptionConfig.method, args]);
     const existingSubscription = this._subscriptionsByHash[hash];
     if (existingSubscription === undefined) {
       this._subscriptionsByHash[hash] = {

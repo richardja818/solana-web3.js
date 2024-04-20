@@ -1,12 +1,21 @@
 import { SOLANA_ERROR__SIGNER__TRANSACTION_SENDING_SIGNER_MISSING, SolanaError } from '@solana/errors';
 import { SignatureBytes } from '@solana/keys';
-import { CompilableTransactionMessage } from '@solana/transaction-messages';
 import {
+    CompilableTransactionMessage,
+    TransactionMessageWithBlockhashLifetime,
+    TransactionMessageWithDurableNonceLifetime,
+} from '@solana/transaction-messages';
+import {
+    assertTransactionIsFullySigned,
     compileTransaction,
     FullySignedTransaction,
-    newAssertTransactionIsFullySigned,
-    NewTransaction,
+    Transaction,
 } from '@solana/transactions';
+import {
+    TransactionWithBlockhashLifetime,
+    TransactionWithDurableNonceLifetime,
+    TransactionWithLifetime,
+} from '@solana/transactions/dist/types/lifetime';
 
 import { getSignersFromTransactionMessage, ITransactionMessageWithSigners } from './account-signer-meta';
 import { deduplicateSigners } from './deduplicate-signers';
@@ -24,8 +33,36 @@ type CompilableTransactionMessageWithSigners = CompilableTransactionMessage & IT
  * It will ignore TransactionSendingSigners since this function does not send the transaction.
  */
 export async function partiallySignTransactionMessageWithSigners<
+    TTransactionMessage extends CompilableTransactionMessageWithSigners &
+        TransactionMessageWithBlockhashLifetime = CompilableTransactionMessageWithSigners &
+        TransactionMessageWithBlockhashLifetime,
+>(
+    transactionMessage: TTransactionMessage,
+    config?: { abortSignal?: AbortSignal },
+): Promise<Transaction & TransactionWithBlockhashLifetime>;
+
+export async function partiallySignTransactionMessageWithSigners<
+    TTransactionMessage extends CompilableTransactionMessageWithSigners &
+        TransactionMessageWithDurableNonceLifetime = CompilableTransactionMessageWithSigners &
+        TransactionMessageWithDurableNonceLifetime,
+>(
+    transactionMessage: TTransactionMessage,
+    config?: { abortSignal?: AbortSignal },
+): Promise<Readonly<Transaction & TransactionWithDurableNonceLifetime>>;
+
+export async function partiallySignTransactionMessageWithSigners<
     TTransactionMessage extends CompilableTransactionMessageWithSigners = CompilableTransactionMessageWithSigners,
->(transactionMessage: TTransactionMessage, config: { abortSignal?: AbortSignal } = {}): Promise<NewTransaction> {
+>(
+    transactionMessage: TTransactionMessage,
+    config?: { abortSignal?: AbortSignal },
+): Promise<Readonly<Transaction & TransactionWithLifetime>>;
+
+export async function partiallySignTransactionMessageWithSigners<
+    TTransactionMessage extends CompilableTransactionMessageWithSigners = CompilableTransactionMessageWithSigners,
+>(
+    transactionMessage: TTransactionMessage,
+    config: { abortSignal?: AbortSignal } = {},
+): Promise<Readonly<Transaction & TransactionWithLifetime>> {
     const { partialSigners, modifyingSigners } = categorizeTransactionSigners(
         deduplicateSigners(getSignersFromTransactionMessage(transactionMessage).filter(isTransactionSigner)),
         { identifySendingSigner: false },
@@ -46,13 +83,38 @@ export async function partiallySignTransactionMessageWithSigners<
  * It will ignore TransactionSendingSigners since this function does not send the transaction.
  */
 export async function signTransactionMessageWithSigners<
+    TTransactionMessage extends CompilableTransactionMessageWithSigners &
+        TransactionMessageWithBlockhashLifetime = CompilableTransactionMessageWithSigners &
+        TransactionMessageWithBlockhashLifetime,
+>(
+    transactionMessage: TTransactionMessage,
+    config?: { abortSignal?: AbortSignal },
+): Promise<Readonly<FullySignedTransaction & TransactionWithBlockhashLifetime>>;
+
+export async function signTransactionMessageWithSigners<
+    TTransactionMessage extends CompilableTransactionMessageWithSigners &
+        TransactionMessageWithDurableNonceLifetime = CompilableTransactionMessageWithSigners &
+        TransactionMessageWithDurableNonceLifetime,
+>(
+    transactionMessage: TTransactionMessage,
+    config?: { abortSignal?: AbortSignal },
+): Promise<Readonly<FullySignedTransaction & TransactionWithDurableNonceLifetime>>;
+
+export async function signTransactionMessageWithSigners<
+    TTransactionMessage extends CompilableTransactionMessageWithSigners = CompilableTransactionMessageWithSigners,
+>(
+    transactionMessage: TTransactionMessage,
+    config?: { abortSignal?: AbortSignal },
+): Promise<Readonly<FullySignedTransaction & TransactionWithLifetime>>;
+
+export async function signTransactionMessageWithSigners<
     TTransactionMessage extends CompilableTransactionMessageWithSigners = CompilableTransactionMessageWithSigners,
 >(
     transactionMessage: TTransactionMessage,
     config: { abortSignal?: AbortSignal } = {},
-): Promise<FullySignedTransaction> {
+): Promise<Readonly<FullySignedTransaction & TransactionWithLifetime>> {
     const signedTransaction = await partiallySignTransactionMessageWithSigners(transactionMessage, config);
-    newAssertTransactionIsFullySigned(signedTransaction);
+    assertTransactionIsFullySigned(signedTransaction);
     return signedTransaction;
 }
 
@@ -175,7 +237,7 @@ async function signModifyingAndPartialTransactionSigners<
     modifyingSigners: readonly TransactionModifyingSigner[] = [],
     partialSigners: readonly TransactionPartialSigner[] = [],
     abortSignal?: AbortSignal,
-): Promise<NewTransaction> {
+): Promise<Readonly<Transaction & TransactionWithLifetime>> {
     // serialize the transaction
     const transaction = compileTransaction(transactionMessage);
 
@@ -186,7 +248,7 @@ async function signModifyingAndPartialTransactionSigners<
             const [tx] = await modifyingSigner.modifyAndSignTransactions([await transaction], { abortSignal });
             return Object.freeze(tx);
         },
-        Promise.resolve(transaction) as Promise<NewTransaction>,
+        Promise.resolve(transaction) as Promise<Readonly<Transaction & TransactionWithLifetime>>,
     );
 
     // Handle partial signers in parallel.
@@ -197,7 +259,7 @@ async function signModifyingAndPartialTransactionSigners<
             return signatures;
         }),
     );
-    const signedTransaction: NewTransaction = {
+    const signedTransaction: Readonly<Transaction & TransactionWithLifetime> = {
         ...modifiedTransaction,
         signatures: Object.freeze(
             signatureDictionaries.reduce((signatures, signatureDictionary) => {

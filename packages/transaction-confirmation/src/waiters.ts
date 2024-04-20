@@ -1,11 +1,9 @@
 import { Signature } from '@solana/keys';
-import type { Slot } from '@solana/rpc-types';
+import { getSignatureFromTransaction, Transaction } from '@solana/transactions';
 import {
-    getSignatureFromTransaction,
-    IDurableNonceTransaction,
-    ITransactionWithFeePayer,
-    ITransactionWithSignatures,
-} from '@solana/transactions';
+    TransactionWithBlockhashLifetime,
+    TransactionWithDurableNonceLifetime,
+} from '@solana/transactions/dist/types/lifetime';
 
 import { createBlockHeightExceedencePromiseFactory } from './confirmation-strategy-blockheight';
 import { createNonceInvalidationPromiseFactory } from './confirmation-strategy-nonce';
@@ -14,19 +12,13 @@ import { getTimeoutPromise } from './confirmation-strategy-timeout';
 
 interface WaitForDurableNonceTransactionConfirmationConfig extends BaseTransactionConfirmationStrategyConfig {
     getNonceInvalidationPromise: ReturnType<typeof createNonceInvalidationPromiseFactory>;
-    transaction: IDurableNonceTransaction & ITransactionWithFeePayer & ITransactionWithSignatures;
+    transaction: Readonly<Transaction & TransactionWithDurableNonceLifetime>;
 }
 
 interface WaitForRecentTransactionWithBlockhashLifetimeConfirmationConfig
     extends BaseTransactionConfirmationStrategyConfig {
     getBlockHeightExceedencePromise: ReturnType<typeof createBlockHeightExceedencePromiseFactory>;
-    transaction: ITransactionWithFeePayer &
-        ITransactionWithSignatures &
-        Readonly<{
-            lifetimeConstraint: {
-                lastValidBlockHeight: Slot;
-            };
-        }>;
+    transaction: Readonly<Transaction & TransactionWithBlockhashLifetime>;
 }
 
 interface WaitForRecentTransactionWithTimeBasedLifetimeConfirmationConfig
@@ -47,7 +39,7 @@ export async function waitForDurableNonceTransactionConfirmation(
                     abortSignal,
                     commitment,
                     currentNonceValue: transaction.lifetimeConstraint.nonce,
-                    nonceAccountAddress: transaction.instructions[0].accounts[0].address,
+                    nonceAccountAddress: transaction.lifetimeConstraint.nonceAccountAddress,
                 }),
             ];
         },

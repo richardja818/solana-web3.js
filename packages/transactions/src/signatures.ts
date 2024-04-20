@@ -2,33 +2,27 @@ import { Address, getAddressFromPublicKey } from '@solana/addresses';
 import { Decoder } from '@solana/codecs-core';
 import { getBase58Decoder } from '@solana/codecs-strings';
 import {
+    SOLANA_ERROR__TRANSACTION__ADDRESSES_CANNOT_SIGN_TRANSACTION,
     SOLANA_ERROR__TRANSACTION__FEE_PAYER_SIGNATURE_MISSING,
     SOLANA_ERROR__TRANSACTION__SIGNATURES_MISSING,
     SolanaError,
 } from '@solana/errors';
-import { isSignerRole } from '@solana/instructions';
 import { Signature, SignatureBytes, signBytes } from '@solana/keys';
 
-import { CompilableTransaction } from './compilable-transaction';
-import { ITransactionWithFeePayer } from './fee-payer';
-import { compileTransactionMessage } from './message';
-import { getCompiledMessageEncoder } from './serializers/message';
+import { Transaction } from './transaction';
 
-export interface IFullySignedTransaction extends ITransactionWithSignatures {
+export interface FullySignedTransaction extends Transaction {
     readonly __brand: unique symbol;
-}
-export interface ITransactionWithSignatures {
-    readonly signatures: Readonly<Record<Address, SignatureBytes>>;
 }
 
 let base58Decoder: Decoder<string> | undefined;
 
-export function getSignatureFromTransaction(
-    transaction: ITransactionWithFeePayer & ITransactionWithSignatures,
-): Signature {
+export function getSignatureFromTransaction(transaction: Transaction): Signature {
     if (!base58Decoder) base58Decoder = getBase58Decoder();
 
-    const signatureBytes = transaction.signatures[transaction.feePayer];
+    // We have ordered signatures from the compiled message accounts
+    // first signature is the fee payer
+    const signatureBytes = Object.values(transaction.signatures)[0];
     if (!signatureBytes) {
         throw new SolanaError(SOLANA_ERROR__TRANSACTION__FEE_PAYER_SIGNATURE_MISSING);
     }
@@ -36,52 +30,85 @@ export function getSignatureFromTransaction(
     return transactionSignature as Signature;
 }
 
-export async function partiallySignTransaction<TTransaction extends CompilableTransaction>(
-    keyPairs: CryptoKeyPair[],
-    transaction: TTransaction | (ITransactionWithSignatures & TTransaction),
-): Promise<ITransactionWithSignatures & TTransaction> {
-    const compiledMessage = compileTransactionMessage(transaction);
-    const nextSignatures: Record<Address, SignatureBytes> =
-        'signatures' in transaction ? { ...transaction.signatures } : {};
-    const wireMessageBytes = getCompiledMessageEncoder().encode(compiledMessage);
-    const publicKeySignaturePairs = await Promise.all(
-        keyPairs.map(keyPair =>
-            Promise.all([getAddressFromPublicKey(keyPair.publicKey), signBytes(keyPair.privateKey, wireMessageBytes)]),
-        ),
-    );
-    for (const [signerPublicKey, signature] of publicKeySignaturePairs) {
-        nextSignatures[signerPublicKey] = signature;
-    }
-    const out = {
-        ...transaction,
-        signatures: nextSignatures,
-    };
-    Object.freeze(out);
-    return out;
+function uint8ArraysEqual(arr1: Uint8Array, arr2: Uint8Array) {
+    return arr1.length === arr2.length && arr1.every((value, index) => value === arr2[index]);
 }
 
-export async function signTransaction<TTransaction extends CompilableTransaction>(
+export async function partiallySignTransaction<T extends Transaction>(
     keyPairs: CryptoKeyPair[],
-    transaction: TTransaction | (ITransactionWithSignatures & TTransaction),
-): Promise<IFullySignedTransaction & TTransaction> {
+    transaction: T,
+): Promise<T> {
+    let newSignatures: Record<Address, SignatureBytes> | undefined;
+    let unexpectedSigners: Set<Address> | undefined;
+
+    await Promise.all(
+        keyPairs.map(async keyPair => {
+            const address = await getAddressFromPublicKey(keyPair.publicKey);
+            const existingSignature = transaction.signatures[address];
+
+            // Check if the address is expected to sign the transaction
+            if (existingSignature === undefined) {
+                // address is not an expected signer for this transaction
+                unexpectedSigners ||= new Set();
+                unexpectedSigners.add(address);
+                return;
+            }
+
+            // Return if there are any unexpected signers already since we won't be using signatures
+            if (unexpectedSigners) {
+                return;
+            }
+
+            const newSignature = await signBytes(keyPair.privateKey, transaction.messageBytes);
+
+            if (existingSignature !== null && uint8ArraysEqual(newSignature, existingSignature)) {
+                // already have the same signature set
+                return;
+            }
+
+            newSignatures ||= {};
+            newSignatures[address] = newSignature;
+        }),
+    );
+
+    if (unexpectedSigners && unexpectedSigners.size > 0) {
+        const expectedSigners = Object.keys(transaction.signatures);
+        throw new SolanaError(SOLANA_ERROR__TRANSACTION__ADDRESSES_CANNOT_SIGN_TRANSACTION, {
+            expectedAddresses: expectedSigners,
+            unexpectedAddresses: [...unexpectedSigners],
+        });
+    }
+
+    if (!newSignatures) {
+        return transaction;
+    }
+
+    return Object.freeze({
+        ...transaction,
+        signatures: Object.freeze({
+            ...transaction.signatures,
+            ...newSignatures,
+        }),
+    });
+}
+
+export async function signTransaction<T extends Transaction>(
+    keyPairs: CryptoKeyPair[],
+    transaction: T,
+): Promise<FullySignedTransaction & T> {
     const out = await partiallySignTransaction(keyPairs, transaction);
     assertTransactionIsFullySigned(out);
     Object.freeze(out);
     return out;
 }
 
-export function assertTransactionIsFullySigned<TTransaction extends CompilableTransaction>(
-    transaction: ITransactionWithSignatures & TTransaction,
-): asserts transaction is IFullySignedTransaction & TTransaction {
-    const signerAddressesFromInstructions = transaction.instructions
-        .flatMap(i => i.accounts?.filter(a => isSignerRole(a.role)) ?? [])
-        .map(a => a.address);
-    const requiredSigners = new Set([transaction.feePayer, ...signerAddressesFromInstructions]);
-
+export function assertTransactionIsFullySigned(
+    transaction: Transaction,
+): asserts transaction is FullySignedTransaction {
     const missingSigs: Address[] = [];
-    requiredSigners.forEach(address => {
-        if (!transaction.signatures[address]) {
-            missingSigs.push(address);
+    Object.entries(transaction.signatures).forEach(([address, signatureBytes]) => {
+        if (!signatureBytes) {
+            missingSigs.push(address as Address);
         }
     });
 

@@ -4,7 +4,7 @@ import { SOLANA_ERROR__INVALID_NONCE, SOLANA_ERROR__NONCE_ACCOUNT_NOT_FOUND, Sol
 import type { GetAccountInfoApi, Rpc } from '@solana/rpc';
 import type { AccountNotificationsApi, RpcSubscriptions } from '@solana/rpc-subscriptions';
 import type { Base64EncodedDataResponse, Commitment } from '@solana/rpc-types';
-import type { Nonce } from '@solana/transactions';
+import { Nonce } from '@solana/transaction-messages';
 
 type GetNonceInvalidationPromiseFn = (config: {
     abortSignal: AbortSignal;

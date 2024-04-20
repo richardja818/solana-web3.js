@@ -16,13 +16,13 @@ import { CompiledTransactionMessage } from './compile';
 import type { getCompiledAddressTableLookups } from './compile/address-table-lookups';
 import { createTransactionMessage } from './create-transaction-message';
 import {
-    newIsAdvanceNonceAccountInstruction,
-    NewNonce,
+    isAdvanceNonceAccountInstruction,
+    Nonce,
     setTransactionMessageLifetimeUsingDurableNonce,
 } from './durable-nonce';
 import { setTransactionMessageFeePayer } from './fee-payer';
 import { appendTransactionMessageInstruction } from './instructions';
-import { NewTransactionVersion } from './transaction-message';
+import { TransactionVersion } from './transaction-message';
 
 function getAccountMetas(message: CompiledTransactionMessage): IAccountMeta[] {
     const { header } = message;
@@ -149,7 +149,7 @@ type LifetimeConstraint =
           lastValidBlockHeight: bigint;
       }
     | {
-          nonce: NewNonce;
+          nonce: Nonce;
           nonceAccountAddress: Address;
           nonceAuthorityAddress: Address;
       };
@@ -159,7 +159,7 @@ function getLifetimeConstraint(
     firstInstruction?: IInstruction,
     lastValidBlockHeight?: bigint,
 ): LifetimeConstraint {
-    if (!firstInstruction || !newIsAdvanceNonceAccountInstruction(firstInstruction)) {
+    if (!firstInstruction || !isAdvanceNonceAccountInstruction(firstInstruction)) {
         // first instruction is not advance durable nonce, so use blockhash lifetime constraint
         return {
             blockhash: messageLifetimeToken as Blockhash,
@@ -174,7 +174,7 @@ function getLifetimeConstraint(
         assertIsAddress(nonceAuthorityAddress);
 
         return {
-            nonce: messageLifetimeToken as NewNonce,
+            nonce: messageLifetimeToken as Nonce,
             nonceAccountAddress,
             nonceAuthorityAddress,
         };
@@ -219,7 +219,7 @@ export function decompileTransactionMessage(
     );
 
     return pipe(
-        createTransactionMessage({ version: compiledTransactionMessage.version as NewTransactionVersion }),
+        createTransactionMessage({ version: compiledTransactionMessage.version as TransactionVersion }),
         tx => setTransactionMessageFeePayer(feePayer, tx),
         tx =>
             instructions.reduce((acc, instruction) => {

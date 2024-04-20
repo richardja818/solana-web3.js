@@ -1,63 +1,111 @@
+import '@solana/test-matchers/toBeFrozenObject';
+
 import { Address } from '@solana/addresses';
+import { Blockhash } from '@solana/rpc-types';
+import {
+    CompiledTransactionMessage,
+    compileTransactionMessage,
+    getCompiledTransactionMessageEncoder,
+    Nonce,
+} from '@solana/transaction-messages';
 
-import { getCompiledTransaction } from '../compile-transaction';
-import { CompiledMessage, compileTransactionMessage } from '../message';
-import { ITransactionWithSignatures } from '../signatures';
+import { compileTransaction } from '../compile-transaction';
 
-jest.mock('../message');
+jest.mock('@solana/transaction-messages', () => ({
+    ...jest.requireActual('@solana/transaction-messages'),
+    compileTransactionMessage: jest.fn(),
+    getCompiledTransactionMessageEncoder: jest.fn(),
+}));
 
-let _nextMockAddress = 0;
-function getMockAddress() {
-    return `${_nextMockAddress++}` as Address;
-}
+type TransactionMessage = Parameters<typeof compileTransaction>[0];
 
-describe('getCompiledTransaction', () => {
-    let addressA: Address;
-    let addressB: Address;
-    let mockCompiledMessage: CompiledMessage;
+describe('compileTransactionMessage', () => {
+    const mockAddressA = '2aaa' as Address;
+    const mockAddressB = '1aaa' as Address;
+    const mockCompiledMessage = {
+        header: {
+            numReadonlyNonSignerAccounts: 0,
+            numReadonlySignerAccounts: 0,
+            numSignerAccounts: 2,
+        },
+        instructions: [],
+        lifetimeToken: 'a',
+        staticAccounts: [mockAddressA, mockAddressB],
+        version: 0,
+    } as CompiledTransactionMessage;
+    const mockCompiledMessageBytes = new Uint8Array(Array(100)).fill(1);
     beforeEach(() => {
-        addressA = getMockAddress();
-        addressB = getMockAddress();
-        mockCompiledMessage = {
-            header: {
-                numReadonlyNonSignerAccounts: 0,
-                numReadonlySignerAccounts: 0,
-                numSignerAccounts: 2,
-            },
-            staticAccounts: [addressB, addressA],
-        } as CompiledMessage;
         (compileTransactionMessage as jest.Mock).mockReturnValue(mockCompiledMessage);
+        (getCompiledTransactionMessageEncoder as jest.Mock).mockReturnValue({
+            encode: jest.fn().mockReturnValue(mockCompiledMessageBytes),
+        });
     });
-    it('compiles the transaction message', () => {
-        const compiledTransaction = getCompiledTransaction({} as Parameters<typeof getCompiledTransaction>[0]);
-        expect(compiledTransaction).toHaveProperty('compiledMessage', mockCompiledMessage);
+
+    const emptyMockTransactionMessage = {
+        lifetimeConstraint: {
+            blockhash: '4'.repeat(44) as Blockhash,
+            lastValidBlockHeight: 1n,
+        },
+    } as TransactionMessage;
+
+    it('compiles the supplied `TransactionMessage` and sets the `messageBytes` property to the result', () => {
+        const transaction = compileTransaction(emptyMockTransactionMessage);
+        expect(transaction).toHaveProperty('messageBytes', mockCompiledMessageBytes);
     });
     it('compiles an array of signatures the length of the number of signers', () => {
-        const compiledTransaction = getCompiledTransaction({} as Parameters<typeof getCompiledTransaction>[0]);
-        expect(compiledTransaction.signatures).toHaveLength(mockCompiledMessage.header.numSignerAccounts);
+        const transaction = compileTransaction(emptyMockTransactionMessage);
+        expect(Object.keys(transaction.signatures)).toHaveLength(mockCompiledMessage.header.numSignerAccounts);
     });
-    it("compiles signatures into the correct position in the signatures' array", () => {
-        const mockSignatureA = new Uint8Array(64).fill(1);
-        const mockSignatureB = new Uint8Array(64).fill(2);
-        const transactionWithSignatures = {
-            signatures: { [addressA]: mockSignatureA, [addressB]: mockSignatureB },
-        } as ITransactionWithSignatures & Parameters<typeof getCompiledTransaction>[0];
-        const compiledTransaction = getCompiledTransaction(transactionWithSignatures);
-        expect(compiledTransaction).toHaveProperty('signatures', [
+    it("inserts signers into the correct position in the signatures' array", () => {
+        const transaction = compileTransaction(emptyMockTransactionMessage);
+        expect(Object.keys(transaction.signatures)).toStrictEqual([
             // Two signers, in the order they're found in `mockCompiledMessage.staticAccounts`
-            mockSignatureB,
-            mockSignatureA,
+            mockAddressA,
+            mockAddressB,
         ]);
     });
-    it('compiles a null signature into the compiled signatures array when a signature is missing', () => {
-        const mockSignatureA = new Uint8Array(64).fill(1);
-        const transactionWithSignatures = {
-            signatures: { [addressA]: mockSignatureA },
-        } as ITransactionWithSignatures & Parameters<typeof getCompiledTransaction>[0];
-        const compiledTransaction = getCompiledTransaction(transactionWithSignatures);
-        expect(compiledTransaction).toHaveProperty('signatures', [
-            new Uint8Array(Array(64).fill(0)), // Missing signature for account B
-            mockSignatureA,
-        ]);
+    it('inserts a null signature into the map for each signer', () => {
+        const transaction = compileTransaction(emptyMockTransactionMessage);
+        expect(Object.values(transaction.signatures)).toStrictEqual([null, null]);
+    });
+    it('freezes the returned transaction', () => {
+        const transaction = compileTransaction(emptyMockTransactionMessage);
+        expect(transaction).toBeFrozenObject();
+    });
+
+    it('returns a blockhash lifetime constraint when the transaction message has a blockhash constraint', () => {
+        const transactionMessage = {
+            lifetimeConstraint: {
+                blockhash: 'D5vmAVFNZFaBBZNJ17tMaVrcsQ9DZViL9bAZn1n1Kxer' as Blockhash,
+                lastValidBlockHeight: 1n,
+            },
+        } as TransactionMessage;
+        const transaction = compileTransaction(transactionMessage);
+        expect(transaction.lifetimeConstraint).toStrictEqual({
+            blockhash: 'D5vmAVFNZFaBBZNJ17tMaVrcsQ9DZViL9bAZn1n1Kxer' as Blockhash,
+            lastValidBlockHeight: 1n,
+        });
+    });
+
+    it('returns a durable nonce lifetime constraint when the transaction message has a nonce constraint', () => {
+        const transactionMessage = {
+            instructions: [
+                {
+                    accounts: [
+                        {
+                            address: 'nonceAddress' as Address,
+                        },
+                    ],
+                },
+            ],
+            lifetimeConstraint: {
+                nonce: 'b' as Nonce,
+            },
+        } as unknown as TransactionMessage;
+        const transaction = compileTransaction(transactionMessage);
+        expect(transaction.lifetimeConstraint).toStrictEqual({
+            nonce: 'b' as Nonce,
+            nonceAccountAddress: 'nonceAddress',
+        });
     });
 });

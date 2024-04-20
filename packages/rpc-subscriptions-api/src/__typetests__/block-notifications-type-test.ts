@@ -14,7 +14,7 @@ import type {
     TransactionStatus,
     U64UnsafeBeyond2Pow53Minus1,
 } from '@solana/rpc-types';
-import type { TransactionVersion } from '@solana/transactions';
+import type { TransactionVersion } from '@solana/transaction-messages';
 
 import type { BlockNotificationsApi } from '../block-notifications';
 
