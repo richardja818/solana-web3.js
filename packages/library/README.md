@@ -18,7 +18,7 @@ If you build JavaScript applications on Solana, it’s likely you’ve worked wi
 
 Here’s an example of a common code snippet from `@solana/web3.js`:
 
-```tsx
+```ts
 const connection = new Connection('https://api.mainnet-beta.solana.com');
 const instruction = SystemProgram.transfer({ fromPubkey, toPubkey, lamports });
 const transaction = new Transaction().add(instruction);
@@ -117,7 +117,8 @@ The new library itself is comprised of several smaller, modular packages under t
 -   `@solana/rpc-subscriptions`: For subscribing to RPC notifications
 -   `@solana/signers`: For building message and/or transaction signer objects
 -   `@solana/sysvars`: For fetching and decoding sysvar accounts
--   `@solana/transactions`: For building and transforming Solana transaction objects
+-   `@solana/transaction-messages`: For building and transforming Solana transaction message objects
+-   `@solana/transactions`: For compiling and signing transactions for submission to the network
 -   And many more!
 
 Some of these packages are themselves composed of smaller packages. For instance, `@solana/rpc` is composed of `@solana/rpc-spec` (for core JSON RPC specification types), `@solana/rpc-api` (for the Solana-specific RPC methods), `@solana/rpc-transport-http` (for the default HTTP transport) and so on.
@@ -193,7 +194,7 @@ That being said, the main `@solana/web3.js` library re-exports the `@solana/rpc`
 
 To get started with RPC calls, you may use the `createSolanaRpc` function by providing the URL of the Solana JSON RPC server. This will create a default client for interacting with the Solana JSON RPC.
 
-```tsx
+```ts
 import { createSolanaRpc } from '@solana/web3.js';
 
 // Create an RPC client.
@@ -208,7 +209,7 @@ const slot = await rpc.getSlot().send();
 
 The `createSolanaRpc` function communicates with the RPC server using a default HTTP transport that should satisfy most use cases. However, you may provide your own transport or decorate existing ones to communicate with RPC servers in any way you see fit. In the example below, we explicitly create a transport and use it to create a new RPC client via the `createSolanaRpcFromTransport` function.
 
-```tsx
+```ts
 import { createSolanaRpcFromTransport, createDefaultRpcTransport } from '@solana/web3.js';
 
 // Create an HTTP transport or any custom transport of your choice.
@@ -228,7 +229,7 @@ Using custom RPC transports, one can implement highly specialized functionality 
 
 Here’s an example of how someone might implement a “round robin” approach to leveraging multiple RPC transports within their application:
 
-```tsx
+```ts
 import { createDefaultRpcTransport, createSolanaRpcFromTransport, type RpcTransport } from '@solana/web3.js';
 
 // Create an HTTP transport for each RPC server.
@@ -254,7 +255,7 @@ const rpc = createSolanaRpcFromTransport(roundRobinTransport);
 
 Another example of a possible customization for RPC transports is sharding. Here’s an example:
 
-```tsx
+```ts
 // TODO: Your turn; send us a pull request with an example.
 ```
 
@@ -262,7 +263,7 @@ Another example of a possible customization for RPC transports is sharding. Here
 
 The transport library can also be used to implement custom retry logic on any request:
 
-```tsx
+```ts
 import { createDefaultRpcTransport, createSolanaRpcFromTransport, type RpcTransport } from '@solana/web3.js';
 
 // Set the maximum number of attempts to retry a request.
@@ -308,7 +309,7 @@ const rpc = createSolanaRpcFromTransport(retryingTransport);
 
 Support for handling failover can be implemented as a first-class citizen in your application using the new transport library. Here’s an example of some failover logic integrated into a transport:
 
-```tsx
+```ts
 // TODO: Your turn; send us a pull request with an example.
 ```
 
@@ -316,7 +317,7 @@ Support for handling failover can be implemented as a first-class citizen in you
 
 Perhaps your application needs to make a large number of requests or needs to fan requests for different methods out to different servers. Here’s an example of an implementation that does the latter:
 
-```tsx
+```ts
 import { createDefaultRpcTransport, createSolanaRpcFromTransport, type RpcTransport } from '@solana/web3.js';
 
 // Create multiple transports.
@@ -408,7 +409,9 @@ This means the library can support future additions to the official [Solana JSON
 
 Here’s an example of how a developer at QuickNode might build a custom RPC type-spec for their in-house RPC methods:
 
-```tsx
+```ts
+import { RpcApiMethods } from '@solana/web3.js';
+
 // Define the method's response payload.
 type NftCollectionDetailsApiResponse = Readonly<{
     address: string;
@@ -423,7 +426,7 @@ type NftCollectionDetailsApiResponse = Readonly<{
 }>;
 
 // Set up an interface for the request method.
-interface NftCollectionDetailsApi {
+interface NftCollectionDetailsApi extends RpcApiMethods {
     // Define the method's name, parameters and response type
     qn_fetchNFTCollectionDetails(args: { contracts: string[] }): NftCollectionDetailsApiResponse;
 }
@@ -434,7 +437,7 @@ export type QuickNodeRpcApi = NftCollectionDetailsApi;
 
 Here’s how a developer might use it:
 
-```tsx
+```ts
 import { createDefaultRpcTransport, createRpc, createRpcApi } from '@solana/web3.js';
 
 // Create the custom API.
@@ -464,7 +467,7 @@ Since the arguments of the `getSlot` method are reserved for the request payload
 
 Aborting RPC requests can be useful for a variety of things such as setting a timeout on a request or cancelling a request when a user navigates away from a page.
 
-```tsx
+```ts
 import { createSolanaRpc } from '@solana/web3.js';
 
 const rpc = createSolanaRpc('http://127.0.0.1:8900');
@@ -506,7 +509,7 @@ Since the main `@solana/web3.js` library also re-exports the `@solana/rpc-subscr
 
 To get started with RPC Subscriptions, you may use the `createSolanaRpcSubscriptions` function by providing the WebSocket URL of the Solana JSON RPC server. This will create a default client for interacting with Solana RPC Subscriptions.
 
-```tsx
+```ts
 import { createSolanaRpcSubscriptions } from '@solana/web3.js';
 
 // Create an RPC Subscriptions client.
@@ -520,7 +523,7 @@ The new subscriptions API vends subscription notifications as an `AsyncIterator`
 
 Here’s an example of working with a subscription in the new library:
 
-```tsx
+```ts
 import { address, createSolanaRpcSubscriptions, createDefaultRpcSubscriptionsTransport } from '@solana/web3.js';
 
 // Create the RPC Subscriptions client.
@@ -561,7 +564,7 @@ Let's take a look at some concrete examples that demonstrate how to abort subscr
 
 Here's an example of an `AbortController` used to abort a subscription after a 5-second timeout:
 
-```tsx
+```ts
 import { createSolanaRpcSubscriptions } from '@solana/web3.js';
 
 const rpcSubscriptions = createSolanaRpcSubscriptions('ws://127.0.0.1:8900');
@@ -589,7 +592,7 @@ Read more about `AbortController` at the following links:
 
 It is also possible to abort a subscription inside the `for await...of` loop. This enables us to cancel a subscription based on some condition, such as a change in the state of an account. For instance, the following example cancels a subscription when the owner of an account changes:
 
-```tsx
+```ts
 // Subscribe to account notifications.
 const accountNotifications = await rpc
     .accountNotifications(address('AxZfZWeqztBCL37Mkjkd4b8Hf6J13WCcfozrBY6vZzv3'), { commitment: 'confirmed' })
@@ -638,7 +641,7 @@ When a connection fails unexpectedly, any messages you miss while disconnected c
 
 Here’s an example of such logic:
 
-```tsx
+```ts
 try {
     for await (const notif of accountNotifications) {
         updateAccountBalance(notif.lamports);
@@ -657,7 +660,7 @@ try {
 
 The `createSolanaRpcSubscriptions` function communicates with the RPC server using a default WebSocket transport that should satisfy most use cases. However, you may here as well provide your own transport or decorate existing ones to communicate with RPC servers in any way you see fit. In the example below, we explicitly create a WebSocket transport and use it to create a new RPC Subscriptions client via the `createSolanaRpcSubscriptionsFromTransport` function.
 
-```tsx
+```ts
 import { createDefaultRpcSubscriptionsTransport, createSolanaRpcSubscriptionsFromTransport } from '@solana/web3.js';
 
 // Create a WebSocket transport or any custom transport of your choice.
@@ -756,7 +759,7 @@ One thing to note is that many operations from Web Crypto – such as importing,
 
 Here’s an example of generating a `CryptoKeyPair` using the Web Crypto API and signing a message:
 
-```tsx
+```ts
 import { generateKeyPair, signBytes, verifySignature } from '@solana/web3.js';
 
 const keyPair: CryptoKeyPair = await generateKeyPair();
@@ -777,7 +780,7 @@ This polyfill can be found at `@solana/webcrypto-ed25519-polyfill` and mimics th
 
 Determine if your target runtime supports Ed25519, and install the polyfill if it does not:
 
-```tsx
+```ts
 import '@solana/webcrypto-ed25519-polyfill';
 import { generateKeyPair, signBytes, verifySignature } from '@solana/web3.js';
 
@@ -798,7 +801,7 @@ Consequently, that means no more `PublicKey`.
 
 Here’s what they look like in development:
 
-```tsx
+```ts
 import { Address, address, getAddressFromPublicKey, generateKeyPair } from '@solana/web3.js';
 
 // Coerce a string to an `Address`
@@ -817,20 +820,22 @@ Some tooling for working with base58-encoded addresses can be found in the `@sol
 
 ## Transactions
 
-Just like many other familiar aspects of the 1.0 library, transactions have received a makeover as well.
+### Creating Transaction Messages
 
-For starters, all transactions are now version-aware, so there’s no longer a need to juggle two different types of transactions (`Transaction` vs. `VersionedTransaction`).
+Like many other familiar aspects of the 1.0 library, transactions have received a makeover.
 
-Address lookups are now completely described inside transaction instructions, so you don’t have to materialize `addressTableLookups` from the transaction object anymore.
+For starters, all transaction messages are now version-aware, so there’s no longer a need to juggle two different types (eg. `Transaction` vs. `VersionedTransaction`).
 
-Here’s a simple example of creating a transaction – notice how the type of the transaction is refined at each step of the process:
+Address lookups are now completely described inside transaction message instructions, so you don’t have to materialize `addressTableLookups` anymore.
 
-```tsx
+Here’s a simple example of creating a transaction message &ndash; notice how its type is refined at each step of the process:
+
+```ts
 import {
     address,
-    createTransaction,
-    setTransactionFeePayer,
-    setTransactionLifetimeUsingBlockhash,
+    createTransactionMessage,
+    setTransactionMessageFeePayer,
+    setTransactionMessageLifetimeUsingBlockhash,
     Blockhash,
 } from '@solana/web3.js';
 
@@ -840,110 +845,104 @@ const recentBlockhash = {
 };
 const feePayer = address('AxZfZWeqztBCL37Mkjkd4b8Hf6J13WCcfozrBY6vZzv3');
 
-// Create a new transaction (legacy)
-const transactionLegacy = createTransaction({ version: 'legacy' });
-//    ^? LegacyTransaction
-
-const transactionWithFeePayerLegacy = setTransactionFeePayer(feePayer, transactionLegacy);
-//    ^? LegacyTransaction & ITransactionWithFeePayer
-
-const transactionWithFeePayerAndLifetimeLegacy = setTransactionLifetimeUsingBlockhash(
-    recentBlockhash,
-    transactionWithFeePayerLegacy,
-);
-//    ^? LegacyTransaction & ITransactionWithFeePayer & ITransactionWithBlockhash
-
-// Create a new transaction (v0)
-const transactionV0 = createTransaction({ version: 0 });
-//    ^? V0Transaction
+// Create a new transaction message
+const transactionMessage = createTransactionMessage({ version: 0 });
+//    ^? V0TransactionMessage
 
 // Set the fee payer
-const transactionWithFeePayerV0 = setTransactionFeePayer(feePayer, transactionV0);
-//    ^? V0Transaction & ITransactionWithFeePayer
+const transactionMessageWithFeePayer = setTransactionMessageFeePayer(feePayer, transactionMessage);
+//    ^? V0TransactionMessage & ITransactionMessageWithFeePayer
 
-const transactionWithFeePayerAndLifetimeV0 = setTransactionLifetimeUsingBlockhash(
+const transactionMessageWithFeePayerAndLifetime = setTransactionMessageLifetimeUsingBlockhash(
+    // ^? V0TransactionMessage & ITransactionMessageWithFeePayer & TransactionMessageWithBlockhashLifetime
     recentBlockhash,
-    transactionWithFeePayerV0,
+    transactionMessageWithFeePayer,
 );
-//    ^? V0Transaction & ITransactionWithFeePayer & ITransactionWithBlockhash
 ```
 
-As you can see, each time a transaction is modified, the type reflects the current state. If you add a fee payer, you’ll get a type representing a transaction with a fee payer, and so on.
+As you can see, each time a transaction message is modified, the type reflects its new shape. If you add a fee payer, you’ll get a type representing a transaction message with a fee payer, and so on.
 
-Additionally, transaction-modifying methods such as `setTransactionFeePayer(..)` and `setTransactionLifetimeUsingBlockhash(..)` will strip a transaction of its signatures, since those signatures would no longer match the modified transaction message.
+Transaction message objects are also **frozen by these functions** to prevent them from being mutated in place.
 
-```tsx
-import {
-    address,
-    createTransaction,
-    generateKeyPair,
-    setTransactionFeePayer,
-    setTransactionLifetimeUsingBlockhash,
-    signTransaction,
-    Blockhash,
-} from '@solana/web3.js';
+### Signing Transaction Messages
 
-const recentBlockhash = {
-    blockhash: '4uhcVJyU9pJkvQyS88uRDiswHXSCkY3zQawwpjk2NsNY' as Blockhash,
-    lastValidBlockHeight: 196055492n,
-};
+The `signTransaction(..)` function will raise a type error if your transaction message is not already equipped with a fee payer and a lifetime. This helps you catch errors at author-time instead of runtime.
+
+```ts
 const feePayer = address('AxZfZWeqztBCL37Mkjkd4b8Hf6J13WCcfozrBY6vZzv3');
 const signer = await generateKeyPair();
 
-const transaction = createTransaction({ version: 'legacy' });
-const transactionWithFeePayer = setTransactionFeePayer(feePayer, transaction);
-const transactionWithFeePayerAndLifetime = setTransactionLifetimeUsingBlockhash(
-    recentBlockhash,
-    transactionWithFeePayer,
-);
-const transactionSignedWithFeePayerAndLifetime = await signTransaction([signer], transactionWithFeePayerAndLifetime);
-//    ^? LegacyTransaction & ITransactionWithFeePayer & ITransactionWithBlockhash & ITransactionWithSignatures
+const transactionMessage = createTransactionMessage({ version: 'legacy' });
+const transactionMessageWithFeePayer = setTransactionMessageFeePayer(feePayer, transactionMessage);
 
-// Setting the lifetime again will remove the signatures from the object
-const transactionSignaturesStripped = setTransactionLifetimeUsingBlockhash(
-    recentBlockhash,
-    transactionSignedWithFeePayerAndLifetime,
-);
-//    ^? LegacyTransaction & ITransactionWithFeePayer & ITransactionWithBlockhash
-```
-
-The `signTransaction(..)` function will raise a type error if your unsigned transaction is not already equipped with a fee payer and a lifetime.
-
-```tsx
-const feePayer = address('AxZfZWeqztBCL37Mkjkd4b8Hf6J13WCcfozrBY6vZzv3');
-const signer = await generateKeyPair();
-
-const transaction = createTransaction({ version: 'legacy' });
-const transactionWithFeePayer = setTransactionFeePayer(feePayer, transaction);
-
-// Attempting to sign the transaction without a lifetime will throw a type error
-const transactionSignedWithFeePayer = await signTransaction([signer], transactionWithFeePayer);
+// Attempting to sign the transaction message without a lifetime will throw a type error
+const signedTransaction = await signTransaction([signer], transactionMessageWithFeePayer);
 // => "Property 'lifetimeConstraint' is missing in type"
 ```
 
-Transaction objects are also **frozen by these functions** to prevent transactions from being mutated in place by functions you pass them to.
+### Calibrating A Transaction Message's Compute Unit Budget
 
-Building transactions in this manner might feel different from what you’re used to. Also, we certainly wouldn’t want you to have to bind transformed transactions to a new variable at each step, so we have released a functional programming library dubbed `@solana/functional` that lets you build transactions in **pipelines**. Here’s how it can be used:
+Correctly budgeting a compute unit limit for your transaction message can increase the probabilty that your transaction will be accepted for processing. If you don't declare a compute unit limit on your transaction, validators will assume an upper limit of 200K compute units (CU) per instruction.
 
-```tsx
-import { pipe } from '@solana/functional';
-import {
-    address,
-    Blockhash,
-    createTransaction,
-    setTransactionFeePayer,
-    setTransactionLifetimeUsingBlockhash,
-} from '@solana/web3.js';
+Since validators have an incentive to pack as many transactions into each block as possible, they may choose to include transactions that they know will fit into the remaining compute budget for the current block over transactions that might not. For this reason, you should set a compute unit limit on each of your transaction messages, whenever possible.
 
-// Use `pipe(..)` to create a pipeline of transaction transform operations
-const transaction = pipe(
-    createTransaction({ version: 0 }),
-    tx => setTransactionFeePayer(feePayer, tx),
-    tx => setTransactionLifetimeUsingBlockhash(recentBlockhash, tx),
+Use this utility to estimate the actual compute unit cost of a given transaction message.
+
+```ts
+import { getSetComputeLimitInstruction } from '@solana-program/compute-budget';
+import { createSolanaRpc, getComputeUnitEstimateForTransactionMessageFactory, pipe } from '@solana/web3.js';
+
+// Create an estimator function.
+const rpc = createSolanaRpc('http://127.0.0.1:8899');
+const getComputeUnitEstimateForTransactionMessage = getComputeUnitEstimateForTransactionMessageFactory({
+    rpc,
+});
+
+// Create your transaction message.
+const transactionMessage = pipe(
+    createTransactionMessage({ version: 'legacy' }),
+    /* ... */
+);
+
+// Request an estimate of the actual compute units this message will consume.
+const computeUnitsEstimate = await getComputeUnitEstimateForTransactionMessage(transactionMessage);
+
+// Set the transaction message's compute unit budget.
+const transactionMessageWithComputeUnitLimit = prependTransactionMessageInstruction(
+    getSetComputeLimitInstruction({ units: computeUnitsEstimate }),
+    transactionMessage,
 );
 ```
 
-Note that `pipe(..)` is completely decoupled from transactions, so it can be used to pipeline any compatible transforms.
+> [!WARNING]
+> The compute unit estimate is just that &ndash; an estimate. The compute unit consumption of the actual transaction might be higher or lower than what was observed in simulation. Unless you are confident that your particular transaction message will consume the same or fewer compute units as was estimated, you might like to augment the estimate by either a fixed number of CUs or a multiplier.
+
+> [!NOTE]
+> If you are preparing an _unsigned_ transaction, destined to be signed and submitted to the network by a wallet, you might like to leave it up to the wallet to determine the compute unit limit. Consider that the wallet might have a more global view of how many compute units certain types of transactions consume, and might be able to make better estimates of an appropriate compute unit budget.
+
+### Helpers For Building Transaction Messages
+
+Building transaction messages in this manner might feel different from what you’re used to. Also, we certainly wouldn’t want you to have to bind transformed transaction messages to a new variable at each step, so we have released a functional programming library dubbed `@solana/functional` that lets you build transaction messages in **pipelines**. Here’s how it can be used:
+
+```ts
+import { pipe } from '@solana/functional';
+import {
+    address,
+    createTransactionMessage,
+    setTransactionMessageFeePayer,
+    setTransactionMessageLifetimeUsingBlockhash,
+    Blockhash,
+} from '@solana/web3.js';
+
+// Use `pipe(..)` to create a pipeline of transaction message transformation operations
+const transactionMessage = pipe(
+    createTransactionMessage({ version: 0 }),
+    tx => setTransactionMessageFeePayer(feePayer, tx),
+    tx => setTransactionMessageLifetimeUsingBlockhash(recentBlockhash, tx),
+);
+```
+
+Note that `pipe(..)` is general-purpose, so it can be used to pipeline any functional transforms.
 
 ## Codecs
 
@@ -961,7 +960,7 @@ These packages are included in the main `@solana/web3.js` library but you may al
 
 Here’s an example of encoding and decoding a custom struct with some strings and numbers:
 
-```tsx
+```ts
 import { addCodecSizePrefix } from '@solana/codecs-core';
 import { getStructCodec } from '@solana/codecs-data-structures';
 import { getU32Codec, getU64Codec, getU8Codec } from '@solana/codecs-numbers';
@@ -997,7 +996,7 @@ myDecodedToken satisfies {
 
 You may only need to encode or decode data, but not both. Importing one or the other allows your optimizing compiler to tree-shake the other implementation away:
 
-```tsx
+```ts
 import { Codec, combineCodec, Decoder, Encoder, addDecoderSizePrefix, addEncoderSizePrefix } from '@solana/codecs-core';
 import { getStructDecoder, getStructEncoder } from '@solana/codecs-data-structures';
 import {
@@ -1054,7 +1053,7 @@ The RPC methods – both HTTP and subscriptions – are built with multiple over
 
 Here’s an example of this in action:
 
-```tsx
+```ts
 // Provide one set of parameters, get a certain type
 // These parameters resolve to return type:
 // {
@@ -1100,47 +1099,44 @@ const blockWithRewardsAndTransactionsResponse = await rpc
 
 As previously mentioned, the type coverage in web3.js 2.0 allows developers to catch common bugs at compile time, rather than runtime.
 
-In the example below, a transaction is created and then attempted to be compiled without setting the fee payer. This would result in a runtime error from the RPC, but instead you will see a type error from TypeScript as you type:
+In the example below, a transaction message is created and then attempted to be signed without setting the fee payer. This would result in a runtime error from the RPC, but instead you will see a type error from TypeScript as you type:
 
-```tsx
-const encodedTx = pipe(
-    createTransaction({ version: 0 }),
-    tx => setTransactionLifetimeUsingBlockhash(recentBlockhash, tx),
-    tx => getBase64EncodedWireTransaction(tx), // Property 'feePayer' is missing in type
+```ts
+const transactionMessage = pipe(createTransactionMessage({ version: 0 }), tx =>
+    setTransactionMessageLifetimeUsingBlockhash(recentBlockhash, tx),
 );
+const signedTransaction = await signTransaction([keyPair], transactionMessage); // ERROR: Property 'feePayer' is missing in type
 ```
 
 Consider another example where a developer is attempting to send a transaction that has not been fully signed. Again, the TypeScript compiler will throw a type error:
 
-```tsx
-const unsignedTransaction = pipe(
-    createTransaction({ version: 0 }),
-    tx => setTransactionFeePayer(feePayerAddress, tx),
-    tx => setTransactionLifetimeUsingBlockhash(recentBlockhash, tx),
+```ts
+const transactionMessage = pipe(
+    createTransactionMessage({ version: 0 }),
+    tx => setTransactionMessageFeePayer(feePayerAddress, tx),
+    tx => setTransactionMessageLifetimeUsingBlockhash(recentBlockhash, tx),
 );
 
-const signature = sendAndConfirmTransaction({
-    confirmRecentTransaction: createDefaultRecentTransactionConfirmer({ rpc, rpcSubscriptions }),
-    rpc,
-    transaction: unsignedTransaction, // Transaction has not been signed: Type error
-});
+const signedTransaction = await signTransaction([], transactionMessage);
 
-const transaction = await signTransaction([], unsignedTransaction);
-
-// Asserts the transaction as a `IFullySignedTransaction`
+// Asserts the transaction is a `FullySignedTransaction`
 // Throws an error if any signatures are missing!
-assertTransactionIsFullySigned(transaction);
+assertTransactionIsFullySigned(signedTransaction);
+
+await sendAndConfirmTransaction(signedTransaction);
 ```
 
-Are you working with a nonce transaction and forgot to make `AdvanceNonce` the first instruction? That’s a type error:
+Are you building a nonce transaction and forgot to make `AdvanceNonce` the first instruction? That’s a type error:
 
-```tsx
+```ts
 const feePayer = await generateKeyPair();
 const feePayerAddress = await getAddressFromPublicKey(feePayer.publicKey);
 
-const notNonceTransaction = pipe(createTransaction({ version: 0 }), tx => setTransactionFeePayer(feePayerAddress, tx));
+const notNonceTransactionMessage = pipe(createTransactionMessage({ version: 0 }), tx =>
+    setTransactionMessageFeePayer(feePayerAddress, tx),
+);
 
-notNonceTransaction satisfies IDurableNonceTransaction;
+notNonceTransactionMessage satisfies TransactionMessageWithDurableNonceLifetime;
 // => Property 'lifetimeConstraint' is missing in type
 
 const nonceConfig = {
@@ -1149,33 +1145,33 @@ const nonceConfig = {
     nonceAuthorityAddress: address('GDhj8paPg8woUzp9n8fj7eAMocN5P7Ej3A7T9F5gotTX'),
 };
 
-const stillNotNonceTransaction = {
+const stillNotNonceTransactionMessage = {
     lifetimeConstraint: nonceConfig,
-    ...notNonceTransaction,
+    ...notNonceTransactionMessage,
 };
 
-stillNotNonceTransaction satisfies IDurableNonceTransaction;
+stillNotNonceTransactionMessage satisfies TransactionMessageWithDurableNonceLifetime;
 // => 'readonly IInstruction<string>[]' is not assignable to type 'readonly [AdvanceNonceAccountInstruction<string, string>, ...IInstruction<string>[]]'
 
-const validNonceTransaction = pipe(
-    createTransaction({ version: 0 }),
-    tx => setTransactionFeePayer(feePayerAddress, tx),
-    tx => setTransactionLifetimeUsingDurableNonce(nonceConfig, tx), // Adds the instruction!
+const validNonceTransactionMessage = pipe(
+    createTransactionMessage({ version: 0 }),
+    tx => setTransactionMessageFeePayer(feePayerAddress, tx),
+    tx => setTransactionMessageLifetimeUsingDurableNonce(nonceConfig, tx), // Adds the instruction!
 );
 
-validNonceTransaction satisfies IDurableNonceTransaction; // OK
+validNonceTransactionMessage satisfies TransactionMessageWithDurableNonceLifetime; // OK
 ```
 
 The library’s type-checking can even catch you using lamports instead of SOL for a value:
 
-```tsx
+```ts
 const airdropAmount = 1n; // SOL
 const signature = rpc.requestAirdrop(myAddress, airdropAmount).send();
 ```
 
 It will force you to cast the numerical value for your airdrop (or transfer, etc.) amount using `lamports()`, which should be a good reminder!
 
-```tsx
+```ts
 const airdropAmount = lamports(1000000000n);
 const signature = rpc.requestAirdrop(myAddress, airdropAmount).send();
 ```
@@ -1188,7 +1184,7 @@ The `@solana/compat` library allows for interoperability between functions and c
 
 Here’s how you can use `@solana/compat` to convert from a legacy `PublicKey` to an `Address`:
 
-```tsx
+```ts
 import { fromLegacyPublicKey } from '@solana/compat';
 
 const publicKey = new PublicKey('B3piXWBQLLRuk56XG5VihxR4oe2PSsDM8nTF6s1DeVF5');
@@ -1197,7 +1193,7 @@ const address: Address = fromLegacyPublicKey(publicKey);
 
 Here’s how to convert from a legacy `Keypair` to a `CryptoKeyPair`:
 
-```tsx
+```ts
 import { fromLegacyKeypair } from '@solana/compat';
 
 const keypairLegacy = Keypair.generate();
@@ -1206,16 +1202,9 @@ const cryptoKeyPair: CryptoKeyPair = fromLegacyKeypair(keypair);
 
 Here’s how to convert legacy transaction objects to the new library’s transaction types:
 
-```tsx
-// For a transaction using a blockhash lifetime
-const tx = fromVersionedTransactionWithBlockhash(legacyTransactionV0);
-// You can also optionally provide a `lastValidBlockheight` parameter to manage retries
-const tx = fromVersionedTransactionWithBlockhash(legacyTransactionV0, lastValidBlockheight);
-
-// For a transaction using a durable nonce lifetime
-const tx = fromVersionedTransactionWithDurableNonce(transaction);
-// Again you can also optionally provide a `lastValidBlockheight`
-const tx = fromVersionedTransactionWithDurableNonce(transaction, lastValidBlockheight);
+```ts
+// Note that you can only convert `VersionedTransaction` objects
+const modernTransaction = fromVersionedTransaction(classicTransaction);
 ```
 
 To see more conversions supported by `@solana/compat`, you can check out the package’s [README on GitHub](https://github.com/solana-labs/solana-web3.js/blob/master/packages/compat/README.md).
@@ -1226,10 +1215,10 @@ Writing JavaScript clients for on-chain programs has been done manually up until
 
 We think that program clients should be _generated_ rather than written. Developers should be able to write Rust programs, compile the program code, and generate all of the JavaScript client-side code to interact with the program.
 
-We use [Kinobi](https://github.com/metaplex-foundation/kinobi) to represent Solana programs and generate clients for them. This includes a JavaScript client compatible with this library. For instance, here is how you’d construct a transaction composed of instructions from three different core programs.
+We use [Kinobi](https://github.com/metaplex-foundation/kinobi) to represent Solana programs and generate clients for them. This includes a JavaScript client compatible with this library. For instance, here is how you’d construct a transaction message composed of instructions from three different core programs.
 
-```tsx
-import { createTransaction, pipe } from '@solana/web3.js';
+```ts
+import { appendTransactionMessageInstructions, createTransactionMessage, pipe } from '@solana/web3.js';
 import { getAddMemoInstruction } from '@solana-program/memo';
 import { getSetComputeUnitLimitInstruction } from '@solana-program/compute-budget';
 import { getTransferSolInstruction } from '@solana-program/system';
@@ -1240,8 +1229,10 @@ const instructions = [
     getAddMemoInstruction({ memo: "I'm transferring some SOL!" }),
 ];
 
-// Creates a V0 transaction with 3 instructions inside.
-const transaction = pipe(createTransaction({ version: 0 }), tx => appendTransactionInstructions(instructions, tx));
+// Creates a V0 transaction message with 3 instructions inside.
+const transactionMessage = pipe(createTransactionMessage({ version: 0 }), tx =>
+    appendTransactionMessageInstructions(instructions, tx),
+);
 ```
 
 As you can see, each program now generates its own library allowing you to cherry-pick your dependencies.
@@ -1349,7 +1340,7 @@ The `@solana/rpc-graphql` package can be used to make GraphQL queries to Solana 
 
 Here’s an example of retrieving account data with GraphQL:
 
-```tsx
+```ts
 const source = `
     query myQuery($address: String!) {
         account(address: $address) {
@@ -1381,7 +1372,7 @@ Using GraphQL allows developers to only specify which fields they _actually_ nee
 
 However, GraphQL is also extremely powerful for **nesting queries**, which can be particularly useful if you want to, say, get the **sum** of every lamports balance of every **owner of the owner** of each token account, while discarding any mint accounts.
 
-```tsx
+```ts
 const source = `
     query getLamportsOfOwnersOfOwnersOfTokenAccounts {
         programAccounts(programAddress: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA") {
@@ -1405,7 +1396,7 @@ const sumOfAllLamportsOfOwnersOfOwnersOfTokenAccounts = result
 
 The new GraphQL package supports this same style of nested querying on transactions and blocks.
 
-```tsx
+```ts
 const source = `
     query myQuery($signature: String!, $commitment: Commitment) {
         transaction(signature: $signature, commitment: $commitment) {

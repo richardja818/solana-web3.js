@@ -1,4 +1,5 @@
 import { Address, getAddressFromPublicKey } from '@solana/addresses';
+import { ReadonlyUint8Array } from '@solana/codecs-core';
 import { SOLANA_ERROR__SIGNER__EXPECTED_KEY_PAIR_SIGNER, SolanaError } from '@solana/errors';
 import { createKeyPairFromBytes, generateKeyPair, signBytes } from '@solana/keys';
 import { partiallySignTransaction } from '@solana/transactions';
@@ -66,6 +67,9 @@ export async function generateKeyPairSigner(): Promise<KeyPairSigner> {
 }
 
 /** Creates a signer capable of signing messages and transactions using the 64 bytes of a KeyPair. */
-export async function createKeyPairSignerFromBytes(bytes: Uint8Array, extractable?: boolean): Promise<KeyPairSigner> {
+export async function createKeyPairSignerFromBytes(
+    bytes: ReadonlyUint8Array,
+    extractable?: boolean,
+): Promise<KeyPairSigner> {
     return await createSignerFromKeyPair(await createKeyPairFromBytes(bytes, extractable));
 }

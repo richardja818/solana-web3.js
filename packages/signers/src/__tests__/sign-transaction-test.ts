@@ -1,16 +1,21 @@
 import '@solana/test-matchers/toBeFrozenObject';
 
 import { Address } from '@solana/addresses';
+import { ReadonlyUint8Array } from '@solana/codecs-core';
 import {
     SOLANA_ERROR__SIGNER__TRANSACTION_SENDING_SIGNER_MISSING,
     SOLANA_ERROR__TRANSACTION__SIGNATURES_MISSING,
     SolanaError,
 } from '@solana/errors';
 import { Blockhash } from '@solana/rpc-types';
-import { compileTransaction, FullySignedTransaction, Transaction, TransactionMessageBytes } from '@solana/transactions';
-import { TransactionWithLifetime } from '@solana/transactions/dist/types/lifetime';
+import {
+    compileTransaction,
+    FullySignedTransaction,
+    Transaction,
+    TransactionMessageBytes,
+    TransactionWithLifetime,
+} from '@solana/transactions';
 
-import { ReadonlyUint8Array } from '../../../codecs-core/dist/types';
 import {
     partiallySignTransactionMessageWithSigners,
     signAndSendTransactionMessageWithSigners,

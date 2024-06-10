@@ -27,7 +27,7 @@ export const instructionTypeDefs = /* GraphQL */ `
         lookupTableAccount: Account
         lookupTableAuthority: Account
         payerAccount: Account
-        recentSlot: BigInt
+        recentSlot: Slot
         systemProgram: Account
     }
 
@@ -309,7 +309,7 @@ export const instructionTypeDefs = /* GraphQL */ `
     """
     type SplTokenTransferInstruction implements TransactionInstruction {
         programId: Address
-        amount: String
+        amount: BigInt
         authority: Account
         destination: Account
         multisigAuthority: Account
@@ -321,7 +321,7 @@ export const instructionTypeDefs = /* GraphQL */ `
     """
     type SplTokenApproveInstruction implements TransactionInstruction {
         programId: Address
-        amount: String
+        amount: BigInt
         delegate: Account
         multisigOwner: Account
         owner: Account
@@ -355,7 +355,7 @@ export const instructionTypeDefs = /* GraphQL */ `
     type SplTokenMintToInstruction implements TransactionInstruction {
         programId: Address
         account: Account
-        amount: String
+        amount: BigInt
         authority: Account
         mint: Account
         mintAuthority: Account
@@ -368,7 +368,7 @@ export const instructionTypeDefs = /* GraphQL */ `
     type SplTokenBurnInstruction implements TransactionInstruction {
         programId: Address
         account: Account
-        amount: String
+        amount: BigInt
         authority: Account
         mint: Account
         multisigAuthority: Account
@@ -412,14 +412,14 @@ export const instructionTypeDefs = /* GraphQL */ `
     """
     type SplTokenTransferCheckedInstruction implements TransactionInstruction {
         programId: Address
-        amount: String
+        amount: BigInt
         authority: Account
         decimals: BigInt # FIXME:*
         destination: Account
         mint: Account
         multisigAuthority: Account
         source: Account
-        tokenAmount: String
+        tokenAmount: BigInt
     }
 
     """
@@ -432,7 +432,7 @@ export const instructionTypeDefs = /* GraphQL */ `
         multisigOwner: Account
         owner: Account
         source: Account
-        tokenAmount: String
+        tokenAmount: BigInt
     }
 
     """
@@ -445,7 +445,7 @@ export const instructionTypeDefs = /* GraphQL */ `
         mint: Account
         mintAuthority: Account
         multisigMintAuthority: Account
-        tokenAmount: String
+        tokenAmount: BigInt
     }
 
     """
@@ -457,7 +457,7 @@ export const instructionTypeDefs = /* GraphQL */ `
         authority: Account
         mint: Account
         multisigAuthority: Account
-        tokenAmount: String
+        tokenAmount: BigInt
     }
 
     """
@@ -490,7 +490,7 @@ export const instructionTypeDefs = /* GraphQL */ `
     """
     type SplTokenAmountToUiAmountInstruction implements TransactionInstruction {
         programId: Address
-        amount: String
+        amount: BigInt
         mint: Account
     }
 
@@ -504,7 +504,28 @@ export const instructionTypeDefs = /* GraphQL */ `
     }
 
     """
-    SplToken: InitializeMintCloseAuthority instruction
+    SplToken-2022: InitializeDefaultAccountState instruction
+    """
+    type SplTokenInitializeDefaultAccountStateInstruction implements TransactionInstruction {
+        programId: Address
+        accountState: SplTokenDefaultAccountState
+        mint: Account
+    }
+
+    """
+    SplToken-2022: UpdateDefaultAccountState instruction
+    """
+    type SplTokenUpdateDefaultAccountStateInstruction implements TransactionInstruction {
+        programId: Address
+        accountState: SplTokenDefaultAccountState
+        freezeAuthority: Account
+        mint: Account
+        multisigFreezeAuthority: Account
+        signers: [Address]
+    }
+
+    """
+    SplToken-2022: InitializeMintCloseAuthority instruction
     """
     type SplTokenInitializeMintCloseAuthorityInstruction implements TransactionInstruction {
         programId: Address
@@ -512,25 +533,590 @@ export const instructionTypeDefs = /* GraphQL */ `
         newAuthority: Account
     }
 
-    # TODO: Extensions!
-    # - TransferFeeExtension
-    # - ConfidentialTransferFeeExtension
-    # - DefaultAccountStateExtension
-    # - Reallocate
-    # - MemoTransferExtension
-    # - CreateNativeMint
-    # - InitializeNonTransferableMint
-    # - InterestBearingMintExtension
-    # - CpiGuardExtension
-    # - InitializePermanentDelegate
-    # - TransferHookExtension
-    # - ConfidentialTransferFeeExtension
-    # - WithdrawExcessLamports
-    # - MetadataPointerExtension
+    """
+    SplToken-2022: InitializePermanentDelegate instruction
+    """
+    type SplTokenInitializePermanentDelegateInstruction implements TransactionInstruction {
+        programId: Address
+        delegate: Account
+        mint: Account
+    }
+
+    """
+    SplToken-2022: InitializeGroupPointer instruction
+    """
+    type SplTokenInitializeGroupPointerInstruction implements TransactionInstruction {
+        programId: Address
+        authority: Account
+        groupAddress: Account
+        mint: Account
+    }
+
+    """
+    SplToken-2022: UpdateGroupPointer instruction
+    """
+    type SplTokenUpdateGroupPointerInstruction implements TransactionInstruction {
+        programId: Address
+        authority: Account
+        groupAddress: Account
+        mint: Account
+        multisigAuthority: Account
+        signers: [Address]
+    }
+
+    """
+    SplToken-2022: InitializeGroupMemberPointer instruction
+    """
+    type SplTokenInitializeGroupMemberPointerInstruction implements TransactionInstruction {
+        programId: Address
+        authority: Account
+        memberAddress: Account
+        mint: Account
+    }
+
+    """
+    SplToken-2022: UpdateGroupMemberPointer instruction
+    """
+    type SplTokenUpdateGroupMemberPointerInstruction implements TransactionInstruction {
+        programId: Address
+        authority: Account
+        memberAddress: Account
+        mint: Account
+        multisigAuthority: Account
+        signers: [Address]
+    }
+
+    """
+    SplToken-2022: InitializeMetadataPointer instruction
+    """
+    type SplTokenInitializeMetadataPointerInstruction implements TransactionInstruction {
+        programId: Address
+        authority: Account
+        metadataAddress: Account
+        mint: Account
+    }
+
+    """
+    SplToken-2022: UpdateMetadataPointer instruction
+    """
+    type SplTokenUpdateMetadataPointerInstruction implements TransactionInstruction {
+        programId: Address
+        authority: Account
+        metadataAddress: Account
+        mint: Account
+        multisigAuthority: Account
+        signers: [Address]
+    }
+
+    """
+    SplToken-2022: InitializeTransferFeeConfig instruction
+    """
+    type SplTokenInitializeTransferFeeConfig implements TransactionInstruction {
+        programId: Address
+        mint: Account
+        transferFeeBasisPoints: BigInt #*FIXME:*
+        transferFeeConfigAuthority: Account
+        withdrawWithheldAuthority: Account
+        maximumFee: BigInt #*FIXME:*
+    }
+
+    """
+    SplToken-2022: InitializeTransferHook instruction
+    """
+    type SplTokenInitializeTransferHookInstruction implements TransactionInstruction {
+        programId: Address
+        authority: Account
+        hookProgramId: Account
+        mint: Account
+    }
+
+    """
+    SplToken-2022: UpdateTransferHook instruction
+    """
+    type SplTokenUpdateTransferHookInstruction implements TransactionInstruction {
+        programId: Address
+        authority: Account
+        hookProgramId: Account
+        mint: Account
+        multisigAuthority: Account
+        signers: [Address]
+    }
+
+    """
+    SplToken-2022: EnableCpiGuard instruction
+    """
+    type SplTokenEnableCpiGuardInstruction implements TransactionInstruction {
+        programId: Address
+        account: Account
+        multisigOwner: Account
+        owner: Account
+        signers: [Address]
+    }
+
+    """
+    SplToken-2022: DisableCpiGuard instruction
+    """
+    type SplTokenDisableCpiGuardInstruction implements TransactionInstruction {
+        programId: Address
+        account: Account
+        multisigOwner: Account
+        owner: Account
+        signers: [Address]
+    }
+
+    """
+    SplToken-2022: HarvestWithheldTokensToMint instruction
+    """
+    type SplTokenHarvestWithheldTokensToMint implements TransactionInstruction {
+        programId: Address
+        mint: Account
+        sourceAccounts: [Address]
+    }
+
+    """
+    SplToken-2022: WithdrawWithheldTokensFromAccounts instruction
+    """
+    type SplTokenWithdrawWithheldTokensFromAccounts implements TransactionInstruction {
+        programId: Address
+        feeRecipient: Account
+        mint: Account
+        multisigWithdrawWithheldAuthority: Account
+        signers: [Address]
+        sourceAccounts: [Address]
+        withdrawWithheldAuthority: Account
+    }
+
+    """
+    SplToken-2022: WithdrawWithheldTokensFromMint instruction
+    """
+    type SplTokenWithdrawWithheldTokensFromMint implements TransactionInstruction {
+        programId: Address
+        feeRecipient: Account
+        mint: Account
+        withdrawWithheldAuthority: Account
+        multisigWithdrawWithheldAuthority: Account
+        signers: [Address]
+    }
+
+    """
+    SplToken-2022: TransferCheckedWithFee instruction
+    """
+    type SplTokenTransferCheckedWithFee implements TransactionInstruction {
+        programId: Address
+        authority: Account
+        destination: Account
+        feeAmount: TokenAmount
+        mint: Account
+        source: Account
+        tokenAmount: TokenAmount
+        multisigAuthority: Account
+        signers: [Address]
+    }
+
+    """
+    SplToken-2022: EnableRequiredMemoTransfers instruction
+    """
+    type SplTokenEnableRequiredMemoTransfers implements TransactionInstruction {
+        programId: Address
+        account: Account
+        owner: Account
+        multisigOwner: Account
+        signers: [Address]
+    }
+
+    """
+    SplToken-2022: DisableRequiredMemoTransfers instruction
+    """
+    type SplTokenDisableRequiredMemoTransfers implements TransactionInstruction {
+        programId: Address
+        account: Account
+        owner: Account
+        multisigOwner: Account
+        signers: [Address]
+    }
+
+    """
+    SplToken-2022: InitializeConfidentialTransferMint instruction
+    """
+    type SplTokenInitializeConfidentialTransferMint implements TransactionInstruction {
+        programId: Address
+        auditorElgamalPubkey: Address
+        authority: Account
+        autoApproveNewAccounts: Boolean
+        mint: Account
+    }
+
+    """
+    SplToken-2022: InitializeInterestBearingConfig instruction
+    """
+    type SplTokenInitializeInterestBearingConfig implements TransactionInstruction {
+        programId: Address
+        mint: Account
+        rate: BigInt #*FIXME:*
+        rateAuthority: Account
+    }
+
+    """
+    SplToken-2022: UpdateInterestBearingConfigRate instruction
+    """
+    type SplTokenUpdateInterestBearingConfigRate implements TransactionInstruction {
+        programId: Address
+        mint: Account
+        multisigRateAuthority: Account
+        newRate: BigInt #*FIXME:*
+        rateAuthority: Account
+        signers: [Address]
+    }
+
+    """
+    SplToken-2022: ApproveConfidentialTransferAccount instruction
+    """
+    type SplTokenApproveConfidentialTransferAccount implements TransactionInstruction {
+        programId: Address
+        account: Account
+        confidentialTransferAuditorAuthority: Account
+        mint: Account
+    }
+
+    """
+    SplToken-2022: EmptyConfidentialTransferAccount instruction
+    """
+    type SplTokenEmptyConfidentialTransferAccount implements TransactionInstruction {
+        programId: Address
+        account: Account
+        instructionsSysvar: Account
+        multisigOwner: Account
+        owner: Account
+        proofInstructionOffset: BigInt #*FIXME:*
+        signers: [Address]
+    }
+
+    """
+    SplToken-2022: ConfigureConfidentialTransferAccount instruction
+    """
+    type SplTokenConfigureConfidentialTransferAccount implements TransactionInstruction {
+        programId: Address
+        account: Account
+        decryptableZeroBalance: String
+        maximumPendingBalanceCreditCounter: BigInt
+        mint: Account
+        multisigOwner: Account
+        signers: [Address]
+    }
+
+    """
+    SplToken-2022: ApplyPendingConfidentialTransferBalance instruction
+    """
+    type SplTokenApplyPendingConfidentialTransferBalance implements TransactionInstruction {
+        programId: Address
+        account: Account
+        expectedPendingBalanceCreditCounter: BigInt
+        multisigOwner: Account
+        newDecryptableAvailableBalance: String
+        owner: Account
+        signers: [Address]
+    }
+
+    """
+    SplToken-2022: EnableConfidentialTransferConfidentialCredits instruction
+    """
+    type SplTokenEnableConfidentialTransferConfidentialCredits implements TransactionInstruction {
+        programId: Address
+        account: Account
+        multisigOwner: Account
+        owner: Account
+        signers: [Address]
+    }
+
+    """
+    SplToken-2022: DisableConfidentialTransferConfidentialCredits instruction
+    """
+    type SplTokenDisableConfidentialTransferConfidentialCredits implements TransactionInstruction {
+        programId: Address
+        account: Account
+        multisigOwner: Account
+        owner: Account
+        signers: [Address]
+    }
+
+    """
+    SplToken-2022: EnableConfidentialTransferNonConfidentialCredits instruction
+    """
+    type SplTokenEnableConfidentialTransferNonConfidentialCredits implements TransactionInstruction {
+        programId: Address
+        account: Account
+        multisigOwner: Account
+        owner: Account
+        signers: [Address]
+    }
+
+    """
+    SplToken-2022: DisableConfidentialTransferNonConfidentialCredits instruction
+    """
+    type SplTokenDisableConfidentialTransferNonConfidentialCredits implements TransactionInstruction {
+        programId: Address
+        account: Account
+        multisigOwner: Account
+        owner: Account
+        signers: [Address]
+    }
+
+    """
+    SplToken-2022: DepositConfidentialTransfer instruction
+    """
+    type SplTokenDepositConfidentialTransfer implements TransactionInstruction {
+        programId: Address
+        amount: BigInt
+        decimals: BigInt # FIXME:*
+        destination: Account
+        mint: Account
+        multisigOwner: Account
+        owner: Account
+        signers: [Address]
+        source: Account
+    }
+
+    """
+    SplToken-2022: WithdrawConfidentialTransfer instruction
+    """
+    type SplTokenWithdrawConfidentialTransfer implements TransactionInstruction {
+        programId: Address
+        amount: BigInt
+        decimals: BigInt # FIXME:*
+        destination: Account
+        instructionsSysvar: Account
+        newDecryptableAvailableBalance: String
+        mint: Account
+        multisigOwner: Account
+        owner: Account
+        proofInstructionOffset: BigInt #*FIXME:*
+        signers: [Address]
+        source: Account
+    }
+
+    """
+    SplToken-2022: ConfidentialTransfer instruction
+    """
+    type SplTokenConfidentialTransfer implements TransactionInstruction {
+        programId: Address
+        destination: Account
+        instructionsSysvar: Account
+        mint: Account
+        multisigOwner: Account
+        newSourceDecryptableAvailableBalance: String
+        owner: Account
+        proofInstructionOffset: BigInt #*FIXME:*
+        signers: [Address]
+        source: Account
+    }
+
+    """
+    SplToken-2022: ConfidentialTransferWithSplitProofs instruction
+    """
+    type SplTokenConfidentialTransferWithSplitProofs implements TransactionInstruction {
+        programId: Address
+        batchedGroupedCiphertext2HandlesValidityContext: Account
+        batchedRangeProofContext: Account
+        ciphertextCommitmentEqualityContext: Account
+        closeSplitContextStateOnExecution: Boolean
+        contextStateOwner: Account
+        destination: Account
+        lamportDestination: Account
+        mint: Account
+        newSourceDecryptableAvailableBalance: String
+        noOpOnUninitializedSplitContextState: Boolean
+        owner: Account
+        source: Account
+    }
+
+    """
+    SplToken-2022: UpdateConfidentialTransferMint instruction
+    """
+    type SplTokenUpdateConfidentialTransferMint implements TransactionInstruction {
+        programId: Address
+        auditorElgamalPubkey: Address
+        authority: Account
+        autoApproveNewAccounts: Boolean
+        confidentialTransferMintAuthority: Account
+        mint: Account
+        newConfidentialTransferMintAuthority: Account
+    }
+
+    """
+    SplToken-2022: WithdrawWithheldConfidentialTransferTokensFromMint instruction
+    """
+    type SplTokenWithdrawWithheldConfidentialTransferTokensFromMint implements TransactionInstruction {
+        programId: Address
+        feeRecipient: Account
+        instructionsSysvar: Account
+        mint: Account
+        multisigWithdrawWithheldAuthority: Account
+        proofInstructionOffset: BigInt #*FIXME:*
+        signers: [Address]
+        withdrawWithheldAuthority: Account
+    }
+
+    """
+    SplToken-2022: WithdrawWithheldConfidentialTransferTokensFromAccounts instruction
+    """
+    type SplTokenWithdrawWithheldConfidentialTransferTokensFromAccounts implements TransactionInstruction {
+        programId: Address
+        feeRecipient: Account
+        instructionsSysvar: Account
+        mint: Account
+        multisigWithdrawWithheldAuthority: Account
+        proofInstructionOffset: BigInt #*FIXME:*
+        signers: [Address]
+        sourceAccounts: [Address]
+        withdrawWithheldAuthority: Account
+    }
+
+    """
+    SplToken-2022: HarvestWithheldConfidentialTransferTokensToMint instruction
+    """
+    type SplTokenHarvestWithheldConfidentialTransferTokensToMint implements TransactionInstruction {
+        programId: Address
+        mint: Account
+        sourceAccounts: [Address]
+    }
+
+    """
+    SplToken-2022: EnableConfidentialTransferFeeHarvestToMint instruction
+    """
+    type SplTokenEnableConfidentialTransferFeeHarvestToMint implements TransactionInstruction {
+        programId: Address
+        account: Account
+        owner: Account
+        multisigOwner: Account
+        signers: Address
+    }
+
+    """
+    SplToken-2022: DisableConfidentialTransferFeeHarvestToMint instruction
+    """
+    type SplTokenDisableConfidentialTransferFeeHarvestToMint implements TransactionInstruction {
+        programId: Address
+        account: Account
+        multisigOwner: Account
+        owner: Account
+        signers: Address
+    }
+
+    """
+    SplToken-2022: InitializeConfidentialTransferFeeConfig instruction
+    """
+    type SplTokenInitializeConfidentialTransferFeeConfig implements TransactionInstruction {
+        programId: Address
+        authority: Account
+        harvestToMintEnabled: Boolean
+        mint: Account
+        withdrawWithheldAuthorityElgamalPubkey: Address
+        withheldAmount: String
+    }
+
+    """
+    Spl Token Group: InitializeGroup instruction
+    """
+    type SplTokenGroupInitializeGroup implements TransactionInstruction {
+        programId: Address
+        group: Account
+        maxSize: BigInt
+        mint: Account
+        mintAuthority: Account
+        updateAuthority: Account
+    }
+
+    """
+    Spl Token Group: UpdateGroupMaxSize instruction
+    """
+    type SplTokenGroupUpdateGroupMaxSize implements TransactionInstruction {
+        programId: Address
+        group: Account
+        maxSize: BigInt
+        updateAuthority: Account
+    }
+
+    """
+    Spl Token Group: UpdateGroupAuthority instruction
+    """
+    type SplTokenGroupUpdateGroupAuthority implements TransactionInstruction {
+        programId: Address
+        group: Account
+        newAuthority: Account
+        updateAuthority: Account
+    }
+
+    """
+    Spl Token Group: InitializeMember instruction
+    """
+    type SplTokenGroupInitializeMember implements TransactionInstruction {
+        programId: Address
+        group: Account
+        groupUpdateAuthority: Account
+        member: Account
+        memberMint: Account
+        memberMintAuthority: Account
+    }
+
+    """
+    Spl Token Metadata: InitializeMetadata instruction
+    """
+    type SplTokenMetadataInitialize implements TransactionInstruction {
+        programId: Address
+        metadata: Account
+        mint: Account
+        mintAuthority: Account
+        name: String
+        symbol: String
+        updateAuthority: Account
+        uri: String
+    }
+
+    """
+    Spl Token Metadata: UpdateField instruction
+    """
+    type SplTokenMetadataUpdateField implements TransactionInstruction {
+        programId: Address
+        field: String
+        metadata: Account
+        updateAuthority: Account
+        value: String
+    }
+
+    """
+    Spl Token Metadata: RemoveKey instruction
+    """
+    type SplTokenMetadataRemoveKey implements TransactionInstruction {
+        programId: Address
+        idempotent: Boolean
+        key: String
+        metadata: Account
+        updateAuthority: Account
+    }
+
+    """
+    Spl Token Metadata: UpdateAuthority instruction
+    """
+    type SplTokenMetadataUpdateAuthority implements TransactionInstruction {
+        programId: Address
+        metadata: Account
+        newAuthority: Account
+        updateAuthority: Account
+    }
+
+    """
+    Spl Token Metadata: Emit instruction
+    """
+    type SplTokenMetadataEmit implements TransactionInstruction {
+        programId: Address
+        metadata: Account
+        end: BigInt
+        start: BigInt
+    }
 
     type Lockup {
         custodian: Account
-        epoch: BigInt
+        epoch: Epoch
         unixTimestamp: BigInt
     }
 
@@ -580,7 +1166,7 @@ export const instructionTypeDefs = /* GraphQL */ `
     """
     type StakeSplitInstruction implements TransactionInstruction {
         programId: Address
-        lamports: BigInt
+        lamports: Lamports
         newSplitAccount: Account
         stakeAccount: Account
         stakeAuthority: Account
@@ -593,7 +1179,7 @@ export const instructionTypeDefs = /* GraphQL */ `
         programId: Address
         clockSysvar: Account
         destination: Account
-        lamports: BigInt
+        lamports: Lamports
         stakeAccount: Account
         withdrawAuthority: Account
     }
@@ -725,7 +1311,7 @@ export const instructionTypeDefs = /* GraphQL */ `
     """
     type CreateAccountInstruction implements TransactionInstruction {
         programId: Address
-        lamports: BigInt
+        lamports: Lamports
         newAccount: Account
         owner: Account
         source: Account
@@ -747,7 +1333,7 @@ export const instructionTypeDefs = /* GraphQL */ `
     type TransferInstruction implements TransactionInstruction {
         programId: Address
         destination: Account
-        lamports: BigInt
+        lamports: Lamports
         source: Account
     }
 
@@ -757,7 +1343,7 @@ export const instructionTypeDefs = /* GraphQL */ `
     type CreateAccountWithSeedInstruction implements TransactionInstruction {
         programId: Address
         base: Account
-        lamports: BigInt
+        lamports: Lamports
         owner: Account
         seed: String
         space: BigInt
@@ -779,7 +1365,7 @@ export const instructionTypeDefs = /* GraphQL */ `
     type WithdrawNonceAccountInstruction implements TransactionInstruction {
         programId: Address
         destination: Account
-        lamports: BigInt
+        lamports: Lamports
         nonceAccount: Account
         nonceAuthority: Account
         recentBlockhashesSysvar: Account
@@ -854,7 +1440,7 @@ export const instructionTypeDefs = /* GraphQL */ `
     type TransferWithSeedInstruction implements TransactionInstruction {
         programId: Address
         destination: Account
-        lamports: BigInt
+        lamports: Lamports
         source: Account
         sourceBase: Address
         sourceOwner: Account
@@ -916,8 +1502,8 @@ export const instructionTypeDefs = /* GraphQL */ `
     }
 
     type Vote {
-        hash: String
-        slots: [BigInt]
+        hash: Hash
+        slots: [Slot]
         timestamp: BigInt
     }
 
@@ -935,12 +1521,12 @@ export const instructionTypeDefs = /* GraphQL */ `
 
     type VoteStateUpdateLockout {
         confirmationCount: BigInt # FIXME:*
-        slot: BigInt
+        slot: Slot
     }
     type VoteStateUpdate {
-        hash: String
+        hash: Hash
         lockouts: [VoteStateUpdateLockout]
-        root: BigInt
+        root: Slot
         timestamp: BigInt
     }
 
@@ -949,7 +1535,7 @@ export const instructionTypeDefs = /* GraphQL */ `
     """
     type VoteUpdateVoteStateInstruction implements TransactionInstruction {
         programId: Address
-        hash: String
+        hash: Hash
         voteAccount: Account
         voteAuthority: Account
         voteStateUpdate: VoteStateUpdate
@@ -960,7 +1546,7 @@ export const instructionTypeDefs = /* GraphQL */ `
     """
     type VoteUpdateVoteStateSwitchInstruction implements TransactionInstruction {
         programId: Address
-        hash: String
+        hash: Hash
         voteAccount: Account
         voteAuthority: Account
         voteStateUpdate: VoteStateUpdate
@@ -971,7 +1557,7 @@ export const instructionTypeDefs = /* GraphQL */ `
     """
     type VoteCompactUpdateVoteStateInstruction implements TransactionInstruction {
         programId: Address
-        hash: String
+        hash: Hash
         voteAccount: Account
         voteAuthority: Account
         voteStateUpdate: VoteStateUpdate
@@ -982,7 +1568,7 @@ export const instructionTypeDefs = /* GraphQL */ `
     """
     type VoteCompactUpdateVoteStateSwitchInstruction implements TransactionInstruction {
         programId: Address
-        hash: String
+        hash: Hash
         voteAccount: Account
         voteAuthority: Account
         voteStateUpdate: VoteStateUpdate
@@ -994,7 +1580,7 @@ export const instructionTypeDefs = /* GraphQL */ `
     type VoteWithdrawInstruction implements TransactionInstruction {
         programId: Address
         destination: Account
-        lamports: BigInt
+        lamports: Lamports
         voteAccount: Account
         withdrawAuthority: Account
     }
@@ -1025,7 +1611,7 @@ export const instructionTypeDefs = /* GraphQL */ `
     type VoteVoteSwitchInstruction implements TransactionInstruction {
         programId: Address
         clockSysvar: Account
-        hash: String
+        hash: Hash
         slotHashesSysvar: Account
         vote: Vote
         voteAccount: Account

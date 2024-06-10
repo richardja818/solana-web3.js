@@ -9,13 +9,29 @@ type GetBlockHeightExceedencePromiseFn = (config: {
     lastValidBlockHeight: bigint;
 }) => Promise<void>;
 
+type CreateBlockHeightExceedencePromiseFactoryyConfig<TCluster> = {
+    rpc: Rpc<GetEpochInfoApi> & { '~cluster'?: TCluster };
+    rpcSubscriptions: RpcSubscriptions<SlotNotificationsApi> & { '~cluster'?: TCluster };
+};
+
 export function createBlockHeightExceedencePromiseFactory({
     rpc,
     rpcSubscriptions,
-}: Readonly<{
-    rpc: Rpc<GetEpochInfoApi>;
-    rpcSubscriptions: RpcSubscriptions<SlotNotificationsApi>;
-}>): GetBlockHeightExceedencePromiseFn {
+}: CreateBlockHeightExceedencePromiseFactoryyConfig<'devnet'>): GetBlockHeightExceedencePromiseFn;
+export function createBlockHeightExceedencePromiseFactory({
+    rpc,
+    rpcSubscriptions,
+}: CreateBlockHeightExceedencePromiseFactoryyConfig<'testnet'>): GetBlockHeightExceedencePromiseFn;
+export function createBlockHeightExceedencePromiseFactory({
+    rpc,
+    rpcSubscriptions,
+}: CreateBlockHeightExceedencePromiseFactoryyConfig<'mainnet'>): GetBlockHeightExceedencePromiseFn;
+export function createBlockHeightExceedencePromiseFactory<
+    TCluster extends 'devnet' | 'mainnet' | 'testnet' | void = void,
+>({
+    rpc,
+    rpcSubscriptions,
+}: CreateBlockHeightExceedencePromiseFactoryyConfig<TCluster>): GetBlockHeightExceedencePromiseFn {
     return async function getBlockHeightExceedencePromise({
         abortSignal: callerAbortSignal,
         commitment,
@@ -54,7 +70,7 @@ export function createBlockHeightExceedencePromiseFactory({
                         } = await getBlockHeightAndDifferenceBetweenSlotHeightAndBlockHeight();
                         currentBlockHeight = recheckedBlockHeight;
                         if (currentBlockHeight > lastValidBlockHeight) {
-                            // Verfied; the block height has been exceeded.
+                            // Verified; the block height has been exceeded.
                             break;
                         } else {
                             // The block height has not been exceeded, which implies that the
